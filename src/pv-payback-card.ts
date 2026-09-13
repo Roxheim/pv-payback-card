@@ -530,17 +530,15 @@ function discountedPaybackDate(
   if (historicalPaybackDate) return { ownValue, exportValue, paybackDate: historicalPaybackDate };
   const seasonal =
     config.use_location_seasonality && validLocation(location?.latitude, location?.longitude);
-  const observedWeights = dailyEnergy.reduce(
-    (sum, day) =>
-      sum +
-      (seasonal ? solarPotentialWeight(new Date(`${day.date}T00:00:00`), location!.latitude!) : 1),
-    0,
-  );
-  const nominalBenefit = dailyEnergy.reduce(
-    (sum, day) =>
-      sum + day.selfConsumption * config.electricity_price + day.exported * config.feed_in_tariff,
-    0,
-  );
+  let observedWeights = 0;
+  let nominalBenefit = 0;
+  for (const day of dailyEnergy) {
+    observedWeights += seasonal
+      ? solarPotentialWeight(new Date(`${day.date}T00:00:00`), location!.latitude!)
+      : 1;
+    nominalBenefit +=
+      day.selfConsumption * config.electricity_price + day.exported * config.feed_in_tariff;
+  }
   if (observedWeights <= 0 || nominalBenefit <= 0) return { ownValue, exportValue };
   const benefitPerWeight = nominalBenefit / observedWeights;
   const forecastDay = calendarDay(now);
